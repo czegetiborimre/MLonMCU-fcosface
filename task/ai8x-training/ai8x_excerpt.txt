@@ -1,0 +1,152 @@
+
+    module.hist = (merged_counts, merged_bins)
+
+
+def _interpolate_hist(counts, bins, new_bins):
+    """
+    Helper function for interpolating histograms to new bins
+    """
+    cumulative_hist = torch.cumsum(counts, dim=0).to(device=bins.device)
+    cumulative_hist = torch.cat((torch.tensor([0]), cumulative_hist))
+    cumulative_interp_hist = torch.from_numpy(np.interp(new_bins.numpy(), bins.numpy(),
+                                                        cumulative_hist.numpy()))
+    interp_counts = torch.diff(cumulative_interp_hist, prepend=torch.tensor([0]))
+
+    return interp_counts
+
+
+# pylint: disable=unused-argument
+def _hist_hook(module, inp, output):
+    """
+    Hook to collect histogram of activations
+    """
+    if not hasattr(module, 'hist'):
+        module.hist = []
+    # dynamic histogram collection
+    hist = histogram(output.clone().detach().flatten(), bins=2048)
+    module.hist.append(hist)
+
+
+def register_hist_hooks(module):
+    """
+    Register hooks for histogram collection
+    """
+    module.handle = module.register_forward_hook(_hist_hook, always_call=True)
+
+
+def release_hist_hooks(module):
+    """
+    Release hooks after histogram collection
+    """
+    module.handle.remove()
+
+
+def _remove_outliers(module, outlier_removal_z_score=8.0):
+    """
+    Remove outliers from histogram
+    """
+    # Get mean and std of histogram
+    hist_count = module.hist[0]
+    hist_bins = module.hist[1]
+    hist_bins_middle = []
+    for i in range(len(hist_bins) - 1):
+        hist_bins_middle.append((hist_bins[i] + hist_bins[i+1])/2)
+    hist_bins_middle = torch.tensor(hist_bins_middle)
+    mean = torch.sum(hist_count[1:] * hist_bins_middle) / torch.sum(hist_count[1:])
+    std = torch.sqrt(torch.sum(hist_count[1:] * (hist_bins_middle - mean)**2)
+                     / torch.sum(hist_count[1:]))
+
+    # When activations are very small, std ends up being 0 due to rounding.
+    # In this case, we set std to a very small value to prevent zero element histogram.
+    if std == 0:
+        std = 1e-9
+    # Calculate bounds according to z-score
+    upper_bound = mean + outlier_removal_z_score * std
+    lower_bound = mean - outlier_removal_z_score * std
+    hist_bins_middle = torch.cat((torch.tensor([0]), hist_bins_middle))
+    # Remove outliers according to bounds
+    hist_count[hist_bins_middle > upper_bound] = 0
+    hist_count[hist_bins_middle < lower_bound] = 0
+    non_zero_bins = hist_count != 0
+    hist_count = hist_count[non_zero_bins]
+    hist_bins = hist_bins[non_zero_bins]
+    module.hist = (hist_count, hist_bins)
+
+
+def init_threshold_module(module, outlier_removal_z_score):
+    """
+    Initialize activation threshold
+    """
+    _merge_hist(module)
+
+--- pre_qat ---
+            thresholds[name] = module.activation_threshold
+
+    # Adjust bias and threshold values according to the previous layers,
+    # and set the final scale value for output layers
+    for name, module in model.named_modules():
+        if isinstance(module, QuantizationAwareModule):
+            if name in prevs:
+                prev_threshold_set = False
+                for name1, module1 in model.named_modules():
+                    if isinstance(module1, QuantizationAwareModule):
+                        if name1 in prevs[name]:
+                            if not prev_threshold_set:
+                                if module.op is not None and module.op.bias is not None:
+                                    module.op.bias = nn.Parameter(module.op.bias /
+                                                                  torch.exp2(thresholds[name1]))
+                                module.activation_threshold = \
+                                    nn.Parameter((module.activation_threshold - thresholds[name1]),
+                                                 requires_grad=False)
+                                if module.wide:
+                                    module.final_scale = nn.Parameter(thresholds[name] -
+                                                                      module.activation_threshold,
+                                                                      requires_grad=False)
+                                else:
+                                    module.final_scale = nn.Parameter(thresholds[name],
+                                                                      requires_grad=False)
+                                prev_threshold_set = True
+                            module1.final_scale = nn.Parameter(torch.tensor(0.),
+                                                               requires_grad=False)
+
+
+@torch.no_grad()
+def stat_collect(train_loader, model, args):
+    """Collect statistics for quantization aware training"""
+    model.eval()
+    for inputs, _ in tqdm(train_loader):
+        inputs = inputs.to(args.device)
+        model(inputs)
+
+
+def pre_qat(model, train_loader, args, qat_policy):
+    """
+    Prepare the model for quantization aware training
+    """
+    init_hist(model)
+    stat_collect(train_loader, model, args)
+    init_threshold(model, qat_policy["outlier_removal_z_score"])
+    release_hist(model)
+    apply_scales(model)
+
+
+def init_hist(model):
+    """
+    Place forward hooks to collect histograms of activations
+    """
+    for _, module in model.named_modules():
+        if isinstance(module, (Eltwise, QuantizationAwareModule)):
+            register_hist_hooks(module)
+
+
+def release_hist(model):
+    """
+    Remove forward hooks after histogram collection
+    """
+    for _, module in model.named_modules():
+        if isinstance(module, (Eltwise, QuantizationAwareModule)):
+            release_hist_hooks(module)
+
+
+def init_threshold(model, outlier_removal_z_score=8.0):
+    """

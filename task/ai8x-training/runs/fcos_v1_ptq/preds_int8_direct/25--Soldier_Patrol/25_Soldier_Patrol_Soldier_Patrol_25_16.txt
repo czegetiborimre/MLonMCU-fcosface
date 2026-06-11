@@ -1,0 +1,3 @@
+25_Soldier_Patrol_Soldier_Patrol_25_16
+1
+915.51 385.99 108.49 126.13 0.0700

@@ -1,0 +1,4 @@
+47_Matador_Bullfighter_matadorbullfighting_47_405
+2
+0.00 0.00 1024.00 653.00 1.0000
+0.00 0.00 18.30 653.00 1.0000

@@ -1,0 +1,74 @@
+---
+arch: ai85netfcosface88
+dataset: WIDERFACE
+
+layers:
+  - pad: 1
+    max_pool: 2
+    pool_stride: 2
+    activate: ReLU
+    in_offset: 0x0000
+    out_offset: 0x2000
+    processors: 0x0000000000000007
+    output_processors: 0x00000000ffff0000
+    data_format: HWC
+    op: conv2d
+
+  - pad: 1
+    activate: ReLU
+    in_offset: 0x2000
+    out_offset: 0x0000
+    processors: 0x00000000ffff0000
+    output_processors: 0x00000000ffffffff
+    op: conv2d
+
+  - pad: 1
+    max_pool: 2
+    pool_stride: 2
+    activate: ReLU
+    in_offset: 0x0000
+    out_offset: 0x2000
+    processors: 0x00000000ffffffff
+    output_processors: 0x00000000ffffffff
+    op: conv2d
+
+  - pad: 1
+    activate: ReLU
+    in_offset: 0x2000
+    out_offset: 0x0000
+    processors: 0x00000000ffffffff
+    output_processors: 0xffffffffffffffff
+    op: conv2d
+
+  - pad: 1
+    activate: ReLU
+    in_offset: 0x0000
+    out_offset: 0x2000
+    processors: 0xffffffffffffffff
+    output_processors: 0xffffffffffffffff
+    op: conv2d
+
+  - pad: 1
+    activate: ReLU
+    in_offset: 0x2000
+    out_offset: 0x0000
+    processors: 0xffffffffffffffff
+    output_processors: 0xffffffffffffffff
+    op: conv2d
+
+  - pad: 1
+    activate: ReLU
+    in_offset: 0x0000
+    out_offset: 0x2000
+    processors: 0xffffffffffffffff
+    output_processors: 0x00000000ffffffff
+    op: conv2d
+
+  - pad: 0
+    activate: None
+    kernel_size: "1x1"
+    in_offset: 0x2000
+    out_offset: 0x4000
+    output_width: 32
+    processors: 0x00000000ffffffff
+    op: conv2d

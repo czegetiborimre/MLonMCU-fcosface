@@ -1,0 +1,18 @@
+# qat_policy_fcosface88.yaml
+#
+# QAT policy for ai85netfcosface88.
+# Used by train_fcos88_qat.py.
+#
+# LESSONS APPLIED:
+#   - outlier_removal_z_score required by ai8x.pre_qat() or it crashes
+#   - shift_quantile 0.985 matches what worked in fcos_s8_qat_final
+#   - start_epoch: 5 gives 4 warmup FP32 epochs before INT8 kicks in
+#   - weight_bits / bias_bits: 8 matches MAX78000 hardware
+
+qat_policy:
+  start_epoch: 5
+  weight_bits: 8
+  bias_bits: 8
+  shift_quantile: 0.985
+  outlier_removal_z_score: 8.0
+  overrides: {}

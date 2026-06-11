@@ -1,0 +1,6 @@
+---
+start_epoch: 4
+weight_bits: 8
+bias_bits: 8
+shift_quantile: 0.985
+outlier_removal_z_score: 8.0

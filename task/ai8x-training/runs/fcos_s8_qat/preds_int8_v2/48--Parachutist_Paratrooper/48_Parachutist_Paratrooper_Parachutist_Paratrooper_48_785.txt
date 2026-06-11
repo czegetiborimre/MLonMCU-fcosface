@@ -1,0 +1,4 @@
+48_Parachutist_Paratrooper_Parachutist_Paratrooper_48_785
+2
+0.00 0.00 1024.00 524.00 1.0000
+0.00 0.00 18.30 524.00 1.0000

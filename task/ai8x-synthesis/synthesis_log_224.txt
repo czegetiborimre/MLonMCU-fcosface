@@ -1,0 +1,34 @@
+Configuring device: MAX78000
+Reading networks/fcosface.yaml to configure network...
+WARNING: Cannot run "yamllint" linter to check networks/fcosface.yaml
+WARNING: Cannot run "yamllint" linter to check networks/fcosface.yaml
+Reading trained/fcosface-nobias-q.pth.tar to configure network weights...
+WARNING: All bias values for `stem1.op.bias` are zero.
+WARNING: All bias values for `stem1.op.bias` are zero.
+WARNING: All bias values for `stem2.op.bias` are zero.
+WARNING: All bias values for `stem2.op.bias` are zero.
+Checkpoint for epoch 1, model ai85netfcosface - weight and bias data:
+ InCh OutCh  Weights         Quant Shift  Min  Max    Size Key                                       Bias       Quant  Min  Max Size Key
+    3    16  (48, 3, 3)          8     2 -109  108     432 stem1.op.weight                           (16,)          8    0    0   16 stem1.op.bias            
+   16    16  (256, 3, 3)         8    -3  -77   80    2304 stem2.op.weight                           (16,)          8    0    0   16 stem2.op.bias            
+   16    32  (512, 3, 3)         8    -3 -114  114    4608 s2a.op.weight                             (32,)          8 -128  127   32 s2a.op.bias              
+   32    32  (1024, 3, 3)        8    -4 -128  127    9216 s2b.op.weight                             (32,)          8 -128  127   32 s2b.op.bias              
+   32    64  (2048, 3, 3)        8    -4 -110  110   18432 s3a.op.weight                             (64,)          8 -128  127   64 s3a.op.bias              
+   64    64  (4096, 3, 3)        8    -5 -128  127   36864 s3b.op.weight                             (64,)          8 -128  127   64 s3b.op.bias              
+   64    64  (4096, 3, 3)        8    -5 -128  127   36864 h1.op.weight                              (64,)          8 -128  127   64 h1.op.bias               
+   64    32  (2048, 3, 3)        8    -5 -109  108   18432 h2.op.weight                              (32,)          8 -128  127   32 h2.op.bias               
+   32     5  (160, 1, 1)         8    -2  -90   89     160 head.op.weight                            (5,)           8  -49   66    5 head.op.bias             
+TOTAL: 9 parameter layers, 127,637 parameters, 127,637 bytes
+Configuring data set: WIDERFACE_KD.
+NOTICE: Layer 0: The input layer uses pooling. Consider downscaling the input data at the source instead.
+NOTICE: Layer 0: The input layer uses pooling. Consider downscaling the input data at the source instead.
+NOTICE: Deduplication eliminated bias values for 1 layer (16 bytes)
+NOTICE: Deduplication eliminated bias values for 1 layer (16 bytes)
+fcosface...
+NOTICE: --overwrite specified, writing to synthed_net\fcosface even though it exists.
+NOTICE: --overwrite specified, writing to synthed_net\fcosface even though it exists.
+Arranging weights... ---------------------------------------- 100%
+Storing weights...   ---------------------------------------- 100%
+WARNING: Layer 0: All bias values are zero. Ignoring the input.
+Creating network...  ---------------------------------------- 100%
+NOTICE: --scale-output set, but all output scales are zero. Unload operation will be realized without scaling.

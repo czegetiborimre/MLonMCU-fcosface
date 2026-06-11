@@ -1,0 +1,70 @@
+---
+arch: memenet
+dataset: memes
+
+layers:
+  # conv1: 3 input channels (RGB) -> 32 output channels
+  - pad: 1
+    activate: ReLU
+    out_offset: 0x2000
+    processors: 0x0000000000000007
+    data_format: HWC
+    op: conv2d
+
+  # conv2: 32 -> 24, maxpool 2x2
+  - pad: 1
+    max_pool: 2
+    pool_stride: 2
+    activate: ReLU
+    out_offset: 0x0000
+    processors: 0x00000000ffffffff
+    op: conv2d
+
+  # conv3: 24 -> 24, maxpool 2x2
+  - pad: 1
+    max_pool: 2
+    pool_stride: 2
+    activate: ReLU
+    out_offset: 0x2000
+    processors: 0x0000000000ffffff
+    op: conv2d
+
+  # conv4: 24 -> 24, maxpool 2x2
+  - pad: 1
+    max_pool: 2
+    pool_stride: 2
+    activate: ReLU
+    out_offset: 0x0000
+    processors: 0x0000000000ffffff
+    op: conv2d
+
+  # conv5: 24 -> 24, no conv pool — mp merged here
+  - pad: 1
+    max_pool: 2
+    pool_stride: 2
+    activate: ReLU
+    out_offset: 0x2000
+    processors: 0x0000000000ffffff
+    op: conv2d
+
+  # fc1: flatten + linear -> 32
+  - op: mlp
+    flatten: true
+    activate: ReLU
+    out_offset: 0x1000
+    output_width: 32
+    processors: 0x0000000000ffffff
+
+  # fc2: 32 -> 16
+  - op: mlp
+    activate: ReLU
+    out_offset: 0x2000
+    output_width: 32
+    processors: 0x00000000ffffffff
+
+  # fc3: 16 -> 4 classes
+  - op: mlp
+    out_offset: 0x1000
+    output_width: 32
+    processors: 0x000000000000ffff
+    output: true

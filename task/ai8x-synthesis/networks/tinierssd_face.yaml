@@ -1,0 +1,159 @@
+---
+# tinierssd_face.yaml -- MAX78000 synthesis config
+# Run with: ai8xize.py --config-file tinierssd_face.yaml --checkpoint-file qat_best.pth.tar --verify-only
+arch: ai85nettinierssdface
+dataset: WIDERFACE_INT8
+
+# Layers that consume from the streaming FIFO (no full input buffer needed).
+# Extend this list down to b5 if --verify-only reports a memory overflow.
+streaming_layers: [0, 1, 2]
+
+layers:
+
+# ---------------- B1: 3 -> 16  @ 224x168 ---------------- (streamed)
+- out_offset: 0x4000
+  processors:        0x0000000000000007   # 3 ch -> P0,P1,P2
+  output_processors: 0x000000000000FFFF   # 16 ch -> Q0
+  operation: Conv2d
+  kernel_size: 3x3
+  pad: 1
+  activate: ReLU
+  data_format: HWC                         # camera frame is HWC
+  streaming: true
+
+# ---------------- B2: 16 -> 32 @ 112x84 ---------------- (streamed, pool+conv)
+- out_offset: 0x0000
+  processors:        0x000000000000FFFF
+  output_processors: 0x00000000FFFFFFFF   # 32 ch -> Q0+Q1
+  operation: Conv2d
+  kernel_size: 3x3
+  pad: 1
+  max_pool: 2
+  pool_stride: 2
+  activate: ReLU
+  streaming: true
+
+# ---------------- B3: 32 -> 32 @ 112x84 ---------------- (streamed, INT4)
+- out_offset: 0x4000
+  processors:        0x00000000FFFFFFFF
+  output_processors: 0x00000000FFFFFFFF
+  operation: Conv2d
+  kernel_size: 3x3
+  pad: 1
+  activate: ReLU
+  quantization: 4
+  streaming: true
+
+# ---------------- B4: 32 -> 48 @ 56x42 ---------------- (pool+conv)
+- out_offset: 0x0000
+  processors:        0x00000000FFFFFFFF
+  output_processors: 0x0000FFFFFFFFFFFF   # 48 ch -> Q0+Q1+half-Q2
+  operation: Conv2d
+  kernel_size: 3x3
+  pad: 1
+  max_pool: 2
+  pool_stride: 2
+  activate: ReLU
+
+# ---------------- B5: 48 -> 64 @ 56x42 ---------------- (INT4)
+- out_offset: 0x4000
+  processors:        0x0000FFFFFFFFFFFF
+  output_processors: 0xFFFFFFFFFFFFFFFF   # 64 ch -> all quadrants
+  operation: Conv2d
+  kernel_size: 3x3
+  pad: 1
+  activate: ReLU
+  quantization: 4
+
+# ---------------- B6: 64 -> 64 @ 28x21 ---------------- (pool+conv)
+# Branch point: this output feeds both b7 AND the stride-8 heads.
+- name: feat_s8
+  out_offset: 0x0000
+  processors:        0xFFFFFFFFFFFFFFFF
+  output_processors: 0xFFFFFFFFFFFFFFFF
+  operation: Conv2d
+  kernel_size: 3x3
+  pad: 1
+  max_pool: 2
+  pool_stride: 2
+  activate: ReLU
+
+# ---------------- B7: 64 -> 96 @ 28x21 ---------------- (INT4)
+- in_sequences: feat_s8
+  out_offset: 0x4000
+  processors:        0xFFFFFFFFFFFFFFFF
+  output_processors: 0x0000FFFFFFFFFFFF   # 96 ch (use 96 of 128 output lanes)
+  operation: Conv2d
+  kernel_size: 3x3
+  pad: 1
+  activate: ReLU
+  quantization: 4
+
+# ---------------- B8: 96 -> 96 @ 14x10 ---------------- (pool+conv)
+# Branch point: feeds the stride-16 heads.
+- name: feat_s16
+  out_offset: 0x0000
+  processors:        0x0000FFFFFFFFFFFF
+  output_processors: 0x0000FFFFFFFFFFFF
+  operation: Conv2d
+  kernel_size: 3x3
+  pad: 1
+  max_pool: 2
+  pool_stride: 2
+  activate: ReLU
+
+# =============================================================
+# SSD HEADS - four output layers, all `output: true` so the host
+# CPU reads them post-inference. Wide outputs (32-bit) so the
+# soft-decoding on the M4 doesn't see saturated logits.
+# =============================================================
+
+# ---------------- cls_8: 64 -> 6 @ 28x21 (INT4) ----------------
+- name: cls_8
+  in_sequences: feat_s8
+  out_offset: 0x4000
+  processors:        0xFFFFFFFFFFFFFFFF
+  output_processors: 0x000000000000003F   # 6 ch (A=3, K=2)
+  operation: Conv2d
+  kernel_size: 3x3
+  pad: 1
+  output_width: 32
+  output: true
+  quantization: 4
+
+# ---------------- reg_8: 64 -> 12 @ 28x21 (INT8) ----------------
+- name: reg_8
+  in_sequences: feat_s8
+  out_offset: 0x6000
+  processors:        0xFFFFFFFFFFFFFFFF
+  output_processors: 0x0000000000000FFF   # 12 ch (A=3 x 4)
+  operation: Conv2d
+  kernel_size: 3x3
+  pad: 1
+  output_width: 32
+  output: true
+
+# ---------------- cls_16: 96 -> 6 @ 14x10 (INT4) ----------------
+- name: cls_16
+  in_sequences: feat_s16
+  out_offset: 0x8000
+  processors:        0x0000FFFFFFFFFFFF
+  output_processors: 0x000000000000003F
+  operation: Conv2d
+  kernel_size: 3x3
+  pad: 1
+  output_width: 32
+  output: true
+  quantization: 4
+
+# ---------------- reg_16: 96 -> 12 @ 14x10 (INT8) ----------------
+- name: reg_16
+  in_sequences: feat_s16
+  out_offset: 0xA000
+  processors:        0x0000FFFFFFFFFFFF
+  output_processors: 0x0000000000000FFF
+  operation: Conv2d
+  kernel_size: 3x3
+  pad: 1
+  output_width: 32
+  output: true

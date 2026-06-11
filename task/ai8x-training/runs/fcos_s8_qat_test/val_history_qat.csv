@@ -1,0 +1,2 @@
+epoch,val_loss,qat_active
+6,0.692554,True

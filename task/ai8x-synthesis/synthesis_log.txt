@@ -1,0 +1,26 @@
+Configuring device: MAX78000
+Reading networks/fcosface88.yaml to configure network...
+WARNING: Cannot run "yamllint" linter to check networks/fcosface88.yaml
+WARNING: Cannot run "yamllint" linter to check networks/fcosface88.yaml
+Reading trained/fcosface88-q.pth to configure network weights...
+Checkpoint for epoch 50, model ai85netfcosface88 - weight and bias data:
+ InCh OutCh  Weights         Quant Shift  Min  Max    Size Key                                       Bias       Quant  Min  Max Size Key
+    3    16  (48, 3, 3)          8     3  -80   88     432 stem1.op.weight                           (16,)          8   -3   13   16 stem1.op.bias            
+   16    32  (512, 3, 3)         8     1  -31   34    4608 stem2.op.weight                           (32,)          8  -12  112   32 stem2.op.bias            
+   32    32  (1024, 3, 3)        8     1  -37   22    9216 s2a.op.weight                             (32,)          8  -42   90   32 s2a.op.bias              
+   32    64  (2048, 3, 3)        8     2  -15   11   18432 s2b.op.weight                             (64,)          8  -29   67   64 s2b.op.bias              
+   64    64  (4096, 3, 3)        8     2  -13   13   36864 s2c.op.weight                             (64,)          8  -25   65   64 s2c.op.bias              
+   64    64  (4096, 3, 3)        8     2  -14   10   36864 h1.op.weight                              (64,)          8  -16   96   64 h1.op.bias               
+   64    32  (2048, 3, 3)        8     2  -16    9   18432 h2.op.weight                              (32,)          8   -5   64   32 h2.op.bias               
+   32     5  (160, 1, 1)         8     3   -8    6     160 head.op.weight                            (5,)           8  -71    3    5 head.op.bias             
+TOTAL: 8 parameter layers, 125,317 parameters, 125,317 bytes
+Configuring data set: WIDERFACE.
+NOTICE: Layer 0: The input layer uses pooling. Consider downscaling the input data at the source instead.
+NOTICE: Layer 0: The input layer uses pooling. Consider downscaling the input data at the source instead.
+fcosface88...
+NOTICE: --overwrite specified, writing to synthed_net\fcosface88 even though it exists.
+NOTICE: --overwrite specified, writing to synthed_net\fcosface88 even though it exists.
+Arranging weights... ---------------------------------------- 100%
+Storing weights...   ---------------------------------------- 100%
+Creating network...  ---------------------------------------- 100%
+NOTICE: --scale-output set, but all output scales are zero. Unload operation will be realized without scaling.
